@@ -3,10 +3,6 @@
   "version": "0.1.2",
   "description": "React Native Pull To Refresh for React Native and React Native Web, support ScrollView and FlatList. Bring Pull To Refresh to Website.",
   "main": "index.js",
-  "devDependencies": {
-    "react": "^18.3.1",
-    "react-native": "^0.74.3"
-  },
   "author": "Chain Platform <santran686@gmail.com> (https://chainplatform.net/)",
   "license": "MIT",
   "keywords": [
@@ -24,6 +20,7 @@
   },
   "dependencies": {
     "@babel/core": "^7.20.0",
+    "react": "^18.2.0",
     "react-native": "^0.74.3",
     "react-native-reanimated": "^3.12.1"
   }
