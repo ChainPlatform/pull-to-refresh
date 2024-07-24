@@ -1,11 +1,11 @@
 {
   "name": "@chainplatform/pull-to-refresh",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "React Native Pull To Refresh for React Native and React Native Web, support ScrollView and FlatList. Bring Pull To Refresh to Website.",
   "main": "index.js",
   "devDependencies": {
-    "react": ">=16.0.0",
-    "react-native": ">=0.63.0"
+    "react": "*",
+    "react-native": "*"
   },
   "author": "Chain Platform <santran686@gmail.com> (https://chainplatform.net/)",
   "license": "MIT",
@@ -21,11 +21,5 @@
   "repository": {
     "type": "git",
     "url": "git://github.com/ChainPlatform/pull-to-refresh.git"
-  },
-  "dependencies": {
-    "@babel/core": "^7.20.0",
-    "react": ">=16.0.0",
-    "react-native": ">=0.63.0",
-    "react-native-reanimated": ">=2.0.0"
   }
 }
