@@ -4,6 +4,12 @@
 - [Example](#example)
 - [Changelog](#changelog)
 
+<a href="https://npmjs.com/package/@chainplatform/pull-to-refresh">
+  <img src="https://img.shields.io/npm/v/@chainplatform/pull-to-refresh.svg"></img>
+  <img src="https://img.shields.io/npm/dt/@chainplatform/pull-to-refresh.svg"></img>
+</a>
+<a href="https://twitter.com/intent/follow?screen_name=doansan"><img src="https://img.shields.io/twitter/follow/doansan.svg?label=Follow%20@doansan" alt="Follow @doansan"></img></a>
+
 ### Install
 ```
 npm install @chainplatform/pull-to-refresh --save
