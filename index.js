@@ -30,7 +30,15 @@ const ChainScrollView = React.forwardRef((props, ref) => {
 
     React.useImperativeHandle(ref, () => ({
         onRefreshed: () => { setRefreshed(); },
+        onScrollTo: (infos) => { onScrollTo(infos); }
     }))
+
+    const onScrollTo = (infos) => {
+        // {x: number, y: number, animated: true|false}
+        if (ref && ref.current && ref.current.getNode) {
+            ref.current.getNode().scrollTo(infos);
+        }
+    }
 
     const onPanRelease = () => {
         pullDownPosition.value = withTiming(isReadyToRefresh.value ? (props.pullDistance / 2) : 0, {
