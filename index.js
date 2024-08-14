@@ -161,10 +161,10 @@ const ChainScrollView = forwardRef((props, ref) => {
     );
 
     const scrollHandler = (event) => {
-        if (typeof props.onScroll != "undefined" && typeof props.onScroll === "function") {
+        scrollPosition = event.nativeEvent.contentOffset.y;
+        if (typeof props.onScroll != "undefined") {
             props.onScroll(event.nativeEvent);
         }
-        scrollPosition = event.nativeEvent.contentOffset.y;
     }
 
     return (<View pointerEvents={refreshing ? "none" : "auto"} style={[{ flex: 1 }]}>
