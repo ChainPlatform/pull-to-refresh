@@ -119,12 +119,12 @@ const ChainScrollView = forwardRef((props, ref) => {
                     Animated.parallel([
                         Animated.timing(opacityAnimation, {
                             toValue: opacityValue,
-                            duration: 150,
+                            duration: 1,
                             useNativeDriver: Platform.OS == "web" ? false : true
                         }),
                         Animated.timing(scaleAnimation, {
                             toValue: scaleValue,
-                            duration: 150,
+                            duration: 1,
                             useNativeDriver: Platform.OS == "web" ? false : true
                         }),
                         Animated.spring(pan, {
