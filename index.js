@@ -44,26 +44,26 @@ const ChainScrollView = forwardRef((props, ref) => {
         Animated.parallel([
             Animated.timing(opacityAnimation, {
                 toValue: opacityValue,
-                duration: 150,
+                duration: 50,
                 useNativeDriver: Platform.OS == "web" ? false : true
             }),
             Animated.timing(scaleAnimation, {
                 toValue: scaleValue,
-                duration: 150,
+                duration: 50,
                 useNativeDriver: Platform.OS == "web" ? false : true
             }),
             Animated.spring(pan, {
                 toValue: pullDownPosition,
                 useNativeDriver: Platform.OS == "web" ? false : true,
-                friction: 10,
-                tension: 100
+                // friction: 10,
+                // tension: 100
             }),
             Animated.spring(heightAnimation, {
                 toValue: pullDistance,
-                duration: 150,
+                duration: 50,
                 useNativeDriver: Platform.OS == "web" ? false : true,
-                friction: 10,
-                tension: 100
+                // friction: 10,
+                // tension: 100
             })
         ]).start();
         isReadyToRefresh = false;
@@ -73,6 +73,11 @@ const ChainScrollView = forwardRef((props, ref) => {
     const panResponderRef = useRef(
         PanResponder.create({
             onMoveShouldSetPanResponder: (event, gestureState) => scrollPosition == 0 && gestureState.dy >= 0 && !refreshing,
+            onMoveShouldSetPanResponderCapture: (event, gestureState) => scrollPosition == 0 && gestureState.dy >= 0 && !refreshing,
+            onPanResponderGrant: (e, gestureState) => {
+                pan.setOffset({ x: pan.x._value, y: pan.y._value });
+                pan.setValue({ x: 0, y: 0 });
+            },
             onPanResponderMove: (evt, gestureState) => {
                 if (!props.scrollEnabled) {
                     return;
@@ -87,13 +92,13 @@ const ChainScrollView = forwardRef((props, ref) => {
                 Animated.parallel([
                     Animated.timing(opacityAnimation, {
                         toValue: opacityValue,
-                        duration: 0,
-                        useNativeDriver: Platform.OS == "web" ? false : true
+                        duration: 1,
+                        useNativeDriver: false
                     }),
                     Animated.timing(scaleAnimation, {
                         toValue: scaleValue,
-                        duration: 0,
-                        useNativeDriver: Platform.OS == "web" ? false : true
+                        duration: 1,
+                        useNativeDriver: false
                     })
                 ]).start();
                 if (pullDownPosition >= pullDistance) {
@@ -123,26 +128,26 @@ const ChainScrollView = forwardRef((props, ref) => {
                     pullDownPosition = pullDistance * 2 / 3;
                     Animated.parallel([
                         Animated.timing(opacityAnimation, {
-                            toValue: opacityValue,
+                            toValue: 0,
                             duration: 1,
                             useNativeDriver: Platform.OS == "web" ? false : true
                         }),
                         Animated.timing(scaleAnimation, {
-                            toValue: scaleValue,
+                            toValue: 0,
                             duration: 1,
                             useNativeDriver: Platform.OS == "web" ? false : true
                         }),
                         Animated.spring(pan, {
                             toValue: pullDownPosition,
                             useNativeDriver: Platform.OS == "web" ? false : true,
-                            friction: 10,
-                            tension: 100
+                            // friction: 10,
+                            // tension: 100
                         }),
                         Animated.spring(heightAnimation, {
                             toValue: pullDownPosition,
                             useNativeDriver: Platform.OS == "web" ? false : true,
-                            friction: 10,
-                            tension: 100
+                            // friction: 10,
+                            // tension: 100
                         })
                     ]).start();
                 } else {
