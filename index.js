@@ -80,16 +80,6 @@ const ChainScrollView = forwardRef((props, ref) => {
                 if (!props.scrollEnabled) {
                     return;
                 }
-
-                if (pullDownPosition >= pullDistance) {
-                    pan.setValue({ x: 0, y: pullDistance });
-                    return;
-                }
-                if (pullDownPosition < 0) {
-                    pan.setValue({ x: 0, y: 0 });
-                    return;
-                }
-
                 pullDownPosition = Math.max(Math.min(pullDistance, gestureState.dy), 0);
                 if (pullDownPosition < pullDistance) {
                     isReadyToRefresh = false;
@@ -115,6 +105,15 @@ const ChainScrollView = forwardRef((props, ref) => {
                         useNativeDriver: false
                     })
                 ]).start();
+
+                if (pullDownPosition >= pullDistance) {
+                    pan.setValue({ x: 0, y: pullDistance });
+                    return;
+                }
+                if (pullDownPosition <= 0) {
+                    pan.setValue({ x: 0, y: 0 });
+                    return;
+                }
 
                 return Animated.event([null, { dx: 0, dy: pan.y }
                 ], { useNativeDriver: false })(evt, gestureState)
