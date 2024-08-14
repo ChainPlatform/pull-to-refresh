@@ -1,18 +1,22 @@
-import React from "react";
-import { Platform, ActivityIndicator, PanResponder, View } from "react-native";
-import Animated, {
-    useSharedValue,
-    useAnimatedStyle,
-    withTiming,
-    withDelay,
-    useAnimatedScrollHandler
-} from "react-native-reanimated";
+import { useRef, forwardRef, useState, useImperativeHandle } from 'react';
+import { Animated, View, ActivityIndicator, PanResponder, Platform } from 'react-native';
 
-const ChainScrollView = React.forwardRef((props, ref) => {
-    const scrollPosition = useSharedValue(0);
-    const pullDownPosition = useSharedValue(0);
-    const isReadyToRefresh = useSharedValue(false);
-    const [refreshing, setRefreshing] = React.useState(false);
+const ChainScrollView = forwardRef((props, ref) => {
+
+    const pan = useRef(new Animated.ValueXY()).current;
+    const [refreshing, setRefreshing] = useState(false);
+    let pullDownPosition = 0;
+    let scrollPosition = 0;
+    let pullDistance = typeof props.pullDistance != "undefined" ? props.pullDistance : 75;
+    let isReadyToRefresh = false;
+    let opacityValue = 0;
+    let scaleValue = 0;
+    const heightAnimation = useRef(new Animated.Value(pullDistance)).current;
+    const heightStyle = { height: heightAnimation };
+    const opacityAnimation = useRef(new Animated.Value(0)).current;
+    const opacityStyle = { opacity: opacityAnimation };
+    const scaleAnimation = useRef(new Animated.Value(0)).current;
+    const scaleStyle = { transform: [{ scale: scaleAnimation }] };
 
     const onRefresh = () => {
         if (typeof props.onRefresh != "undefined" && typeof props.onRefresh === "function") {
@@ -24,148 +28,176 @@ const ChainScrollView = React.forwardRef((props, ref) => {
     }
 
     const setRefreshed = () => {
-        pullDownPosition.value = withTiming(0, { duration: 250 })
+        onPanRelease();
+    }
+
+    useImperativeHandle(ref, () => ({
+        onRefreshed: () => {
+            setRefreshed();
+        },
+    }))
+
+    const onPanRelease = () => {
+        pullDownPosition = 0;
+        opacityValue = 0;
+        scaleValue = 0;
+        scrollPosition = 0;
+        Animated.parallel([
+            Animated.timing(opacityAnimation, {
+                toValue: opacityValue,
+                duration: 150,
+                useNativeDriver: Platform.OS == "web" ? false : true
+            }),
+            Animated.timing(scaleAnimation, {
+                toValue: scaleValue,
+                duration: 150,
+                useNativeDriver: Platform.OS == "web" ? false : true
+            }),
+            Animated.spring(pan, {
+                toValue: pullDownPosition,
+                useNativeDriver: Platform.OS == "web" ? false : true
+            })
+        ]).start();
+        isReadyToRefresh = false;
         setRefreshing(false);
     }
 
-    React.useImperativeHandle(ref, () => ({
-        onRefreshed: () => { setRefreshed(); },
-        onScrollTo: (infos) => { onScrollTo(infos); }
-    }))
-
-    const onScrollTo = (infos) => {
-        // {x: number, y: number, animated: true|false}
-        if (ref && ref.current && ref.current.getNode) {
-            ref.current.getNode().scrollTo(infos);
-        }
-    }
-
-    const onPanRelease = () => {
-        pullDownPosition.value = withTiming(isReadyToRefresh.value ? (props.pullDistance / 2) : 0, {
-            duration: 250
-        })
-        if (isReadyToRefresh.value) {
-            isReadyToRefresh.value = false;
-            onRefresh();
-        }
-    }
-
-    const panResponderRef = React.useRef(
+    const panResponderRef = useRef(
         PanResponder.create({
-            onMoveShouldSetPanResponder: (event, gestureState) => scrollPosition.value <= 0 && gestureState.dy >= 0,
-            onPanResponderMove: (event, gestureState) => {
+            onMoveShouldSetPanResponder: (event, gestureState) => scrollPosition <= 0 && gestureState.dy >= 0 && !refreshing,
+            onPanResponderMove: (evt, gestureState) => {
                 if (!props.scrollEnabled) {
                     return;
                 }
-                pullDownPosition.value = Math.max(
-                    Math.min(props.pullDistance, gestureState.dy / 3.5),
-                    0
-                );
-
-                if (
-                    pullDownPosition.value >= props.pullDistance &&
-                    isReadyToRefresh.value === false
-                ) {
-                    isReadyToRefresh.value = true
+                pullDownPosition = Math.max(Math.min(pullDistance, gestureState.dy), 0);
+                if (pullDownPosition < pullDistance && isReadyToRefresh === true) {
+                    isReadyToRefresh = false;
                 }
-
-                if (
-                    pullDownPosition.value < props.pullDistance / 2 &&
-                    isReadyToRefresh.value === true
-                ) {
-                    isReadyToRefresh.value = false
+                let basePullDistance = pullDownPosition / pullDistance;
+                opacityValue = refreshing ? 0 : Math.max(0, basePullDistance);
+                scaleValue = refreshing ? 0 : Math.max(0, basePullDistance);
+                Animated.parallel([
+                    Animated.timing(opacityAnimation, {
+                        toValue: opacityValue,
+                        duration: 1,
+                        useNativeDriver: Platform.OS == "web" ? false : true
+                    }),
+                    Animated.timing(scaleAnimation, {
+                        toValue: scaleValue,
+                        duration: 1,
+                        useNativeDriver: Platform.OS == "web" ? false : true
+                    })
+                ]).start();
+                if (pullDownPosition >= pullDistance) {
+                    pan.setValue({ x: 0, y: pullDistance });
+                    return;
+                }
+                if (pullDownPosition <= 0) {
+                    pan.setValue({ x: 0, y: 0 });
+                    return;
+                }
+                return Animated.event([null, {
+                    dx: 0, dy: pan.y
+                }
+                ], { useNativeDriver: false })(evt, gestureState)
+            },
+            onPanResponderRelease: () => {
+                if (pullDownPosition >= pullDistance && isReadyToRefresh === false) {
+                    isReadyToRefresh = true;
+                }
+                opacityValue = 0;
+                scaleValue = 0;
+                if (isReadyToRefresh == true) {
+                    onRefresh();
+                    pullDownPosition = pullDistance * 2 / 3;
+                    Animated.parallel([
+                        Animated.timing(opacityAnimation, {
+                            toValue: opacityValue,
+                            duration: 150,
+                            useNativeDriver: Platform.OS == "web" ? false : true
+                        }),
+                        Animated.timing(scaleAnimation, {
+                            toValue: scaleValue,
+                            duration: 150,
+                            useNativeDriver: Platform.OS == "web" ? false : true
+                        }),
+                        Animated.spring(pan, {
+                            toValue: pullDownPosition,
+                            useNativeDriver: Platform.OS == "web" ? false : true
+                        }),
+                        Animated.spring(heightAnimation, {
+                            toValue: pullDownPosition,
+                            useNativeDriver: Platform.OS == "web" ? false : true
+                        })
+                    ]).start();
+                } else {
+                    onPanRelease();
                 }
             },
-            onPanResponderRelease: onPanRelease,
-            onPanResponderTerminate: onPanRelease
-        })
-    )
-
-    const pullDownStyles = useAnimatedStyle(() => {
-        return { transform: [{ translateY: pullDownPosition.value }] }
-    })
-
-    const scrollHandler = useAnimatedScrollHandler({
-        onScroll: event => {
-            if (typeof props.onScroll != "undefined" && typeof props.onScroll === "function") {
-                props.onScroll(event);
+            onPanResponderTerminate: () => {
+                onPanRelease();
             }
-            scrollPosition.value = event.contentOffset.y;
+        }),
+    );
+
+    const scrollHandler = (event) => {
+        if (typeof props.onScroll != "undefined" && typeof props.onScroll === "function") {
+            props.onScroll(event.nativeEvent);
         }
-    })
+        scrollPosition = event.nativeEvent.contentOffset.y;
+    }
 
-    const refreshContainerStyles = useAnimatedStyle(() => {
-        return { height: pullDownPosition.value }
-    })
-
-    const refreshIconStyles = useAnimatedStyle(() => {
-        const scale = Math.min(1, Math.max(0, pullDownPosition.value / 75));
-        return {
-            opacity: refreshing
-                ? withDelay(100, withTiming(0, { duration: 20 }))
-                : Math.max(0, pullDownPosition.value - 50) / 50,
-            transform: [
-                {
-                    scale: scale
-                }
-            ],
-            backgroundColor: "transparent"
-        }
-    }, [refreshing])
-
-    return (
-        <View pointerEvents={refreshing ? "none" : "auto"} style={[{ flex: 1 }]}>
-            <Animated.View style={[{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                justifyContent: "center",
-                alignItems: "center"
-            }, refreshContainerStyles]}>
-                {refreshing && (
-                    <ActivityIndicator
-                        animating={true}
-                        style={[{
-                            flex: 1,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }, typeof props.animatingSize != "undefined" ? { height: props.animatingSize } : {}]}
-                        size={Platform.OS === "web" ? "large" : "small"}
-                        color={typeof props.animatingColor != "undefined" ? props.animatingColor : "#CFD3E2"}
-                    />
-                )}
-                <Animated.Image source={{ uri: arrowIcon }}
-                    tintColor={typeof props.tintColor != "undefined" ? props.tintColor : "#CFD3E2"}
-                    style={[
-                        {
-                            position: "absolute",
-                            top: "50%",
-                            left: "50%",
-                            width: 37,
-                            height: 37,
-                            marginTop: -37 / 2,
-                            marginLeft: -37 / 2,
-                            objectFit: "contain"
-                        },
-                        typeof props.refreshIconStyles != "undefined" ? props.refreshIconStyles : {},
-                        refreshIconStyles
-                    ]} />
-            </Animated.View>
-            <Animated.View style={[{ flex: 1 }, pullDownStyles]} {...panResponderRef.current.panHandlers}>
-                {
-                    typeof props.keyExtractor != "undefined" &&
-                        typeof props.renderItem === "function" &&
-                        typeof props.data === "function" ?
-                        <Animated.FlatList {...props} ref={ref} onScroll={scrollHandler} />
-                        :
-                        <Animated.ScrollView {...props} ref={ref} onScroll={scrollHandler} >
-                            {props.children}
-                        </Animated.ScrollView>
-                }
-            </Animated.View>
-        </View>
-    )
+    return (<View pointerEvents={refreshing ? "none" : "auto"} style={[{ flex: 1 }]}>
+        <Animated.View style={[{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            justifyContent: "center",
+            alignItems: "center"
+        }, heightStyle]}>
+            {refreshing ?
+                <ActivityIndicator
+                    animating={true}
+                    style={[{
+                        flex: 1,
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }, typeof props.animatingSize != "undefined" ? { height: props.animatingSize } : {}]}
+                    size={Platform.OS === "web" ? "large" : "small"}
+                    color={typeof props.animatingColor != "undefined" ? props.animatingColor : "#CFD3E2"}
+                /> : null}
+            <Animated.Image source={{ uri: arrowIcon }}
+                tintColor={typeof props.tintColor != "undefined" ? props.tintColor : "#CFD3E2"}
+                style={[{
+                    position: "absolute",
+                    top: "50%",
+                    left: "50%",
+                    width: 37,
+                    height: 37,
+                    marginTop: -37 / 2,
+                    marginLeft: -37 / 2,
+                    objectFit: "contain",
+                },
+                typeof props.refreshIconStyles != "undefined" ? props.refreshIconStyles : {},
+                    opacityStyle,
+                    scaleStyle
+                ]}
+            />
+        </Animated.View>
+        <Animated.View style={{ flex: 1, transform: [{ translateY: pan.y }], }} {...panResponderRef.current.panHandlers}>
+            {
+                typeof props.keyExtractor != "undefined" &&
+                    typeof props.renderItem === "function" &&
+                    typeof props.data === "function" ?
+                    <Animated.FlatList {...props} ref={ref} onScroll={scrollHandler} />
+                    :
+                    <Animated.ScrollView {...props} ref={ref} onScroll={scrollHandler} >
+                        {props.children}
+                    </Animated.ScrollView>
+            }
+        </Animated.View>
+    </View>);
 });
 
 export default ChainScrollView;
