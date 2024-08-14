@@ -5,9 +5,9 @@ const ChainScrollView = forwardRef((props, ref) => {
 
     const pan = useRef(new Animated.ValueXY()).current;
     const [refreshing, setRefreshing] = useState(false);
+    const [scrollPosition, setScrollPosition] = useState(0);
     let pullDownPosition = 0;
-    let scrollPosition = 0;
-    let pullDistance = typeof props.pullDistance != "undefined" ? props.pullDistance : 75;
+    const pullDistance = typeof props.pullDistance != "undefined" ? props.pullDistance : 75;
     let isReadyToRefresh = false;
     let opacityValue = 0;
     let scaleValue = 0;
@@ -41,7 +41,6 @@ const ChainScrollView = forwardRef((props, ref) => {
         pullDownPosition = 0;
         opacityValue = 0;
         scaleValue = 0;
-        scrollPosition = 0;
         Animated.parallel([
             Animated.timing(opacityAnimation, {
                 toValue: opacityValue,
@@ -55,6 +54,11 @@ const ChainScrollView = forwardRef((props, ref) => {
             }),
             Animated.spring(pan, {
                 toValue: pullDownPosition,
+                useNativeDriver: Platform.OS == "web" ? false : true
+            }),
+            Animated.spring(heightAnimation, {
+                toValue: pullDistance,
+                duration: 150,
                 useNativeDriver: Platform.OS == "web" ? false : true
             })
         ]).start();
@@ -144,7 +148,7 @@ const ChainScrollView = forwardRef((props, ref) => {
         if (typeof props.onScroll != "undefined" && typeof props.onScroll === "function") {
             props.onScroll(event.nativeEvent);
         }
-        scrollPosition = event.nativeEvent.contentOffset.y;
+        setScrollPosition(event.nativeEvent.contentOffset.y);
     }
 
     return (<View pointerEvents={refreshing ? "none" : "auto"} style={[{ flex: 1 }]}>
