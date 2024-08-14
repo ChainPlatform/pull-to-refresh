@@ -42,6 +42,7 @@ const ChainScrollView = forwardRef((props, ref) => {
         pullDownPosition = 0;
         opacityValue = 0;
         scaleValue = 0;
+        isReadyToRefresh = false;
         Animated.parallel([
             Animated.timing(opacityAnimation, {
                 toValue: opacityValue,
@@ -67,7 +68,6 @@ const ChainScrollView = forwardRef((props, ref) => {
                 // tension: 100
             })
         ]).start();
-        isReadyToRefresh = false;
         setRefreshing(false);
     }
 
@@ -84,8 +84,14 @@ const ChainScrollView = forwardRef((props, ref) => {
                     return;
                 }
                 pullDownPosition = Math.max(Math.min(pullDistance, gestureState.dy), 0);
-                if (pullDownPosition < pullDistance && isReadyToRefresh === true) {
+                if (pullDownPosition < pullDistance) {
                     isReadyToRefresh = false;
+                }
+                if (pullDownPosition >= pullDistance &&
+                    isReadyToRefresh === false &&
+                    typeof props.refreshing != "undefined" &&
+                    props.refreshing == false) {
+                    isReadyToRefresh = true;
                 }
                 let basePullDistance = pullDownPosition / pullDistance;
                 opacityValue = refreshing ? 0 : Math.max(0, basePullDistance);
@@ -111,11 +117,11 @@ const ChainScrollView = forwardRef((props, ref) => {
                     return;
                 }
 
-                console.log("onPanResponderMove refreshing ", refreshing);
-                console.log("onPanResponderMove basePullDistance ", basePullDistance);
-                console.log("onPanResponderMove pullDownPosition ", pullDownPosition);
-                console.log("onPanResponderMove scrollPosition ", scrollPosition);
-                console.log("onPanResponderMove isReadyToRefresh ", isReadyToRefresh);
+                // console.log("onPanResponderMove refreshing ", refreshing);
+                // console.log("onPanResponderMove basePullDistance ", basePullDistance);
+                // console.log("onPanResponderMove pullDownPosition ", pullDownPosition);
+                // console.log("onPanResponderMove scrollPosition ", scrollPosition);
+                // console.log("onPanResponderMove isReadyToRefresh ", isReadyToRefresh);
 
                 return Animated.event([null, {
                     dx: 0, dy: pan.y
@@ -123,12 +129,12 @@ const ChainScrollView = forwardRef((props, ref) => {
                 ], { useNativeDriver: false })(evt, gestureState)
             },
             onPanResponderRelease: () => {
-                if (pullDownPosition >= pullDistance &&
-                    isReadyToRefresh === false &&
-                    typeof props.refreshing != "undefined" &&
-                    props.refreshing == false) {
-                    isReadyToRefresh = true;
-                }
+                // if (pullDownPosition >= pullDistance &&
+                //     isReadyToRefresh === false &&
+                //     typeof props.refreshing != "undefined" &&
+                //     props.refreshing == false) {
+                //     isReadyToRefresh = true;
+                // }
                 if (isReadyToRefresh == true) {
                     opacityValue = 0;
                     scaleValue = 0;
@@ -172,9 +178,7 @@ const ChainScrollView = forwardRef((props, ref) => {
     const scrollHandler = (event) => {
         scrollPosition = event.nativeEvent.contentOffset.y;
         // setScroll(event.nativeEvent.contentOffset.y);
-
-        console.log("scrollHandler scrollPosition ", scrollPosition);
-
+        // console.log("scrollHandler scrollPosition ", scrollPosition);
         if (typeof props.onScroll != "undefined") {
             props.onScroll(event.nativeEvent);
         }
