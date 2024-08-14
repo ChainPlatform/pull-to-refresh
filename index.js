@@ -139,7 +139,7 @@ const ChainScrollView = forwardRef((props, ref) => {
                     opacityValue = 0;
                     scaleValue = 0;
                     onRefresh();
-                    pullDownPosition = pullDistance * 2 / 3;
+                    // pullDownPosition = pullDistance * 2 / 3;
                     Animated.parallel([
                         Animated.timing(opacityAnimation, {
                             toValue: 0,
@@ -152,13 +152,13 @@ const ChainScrollView = forwardRef((props, ref) => {
                             useNativeDriver: Platform.OS == "web" ? false : true
                         }),
                         Animated.spring(pan, {
-                            toValue: pullDownPosition,
+                            toValue: pullDistance * 2 / 3,
                             useNativeDriver: Platform.OS == "web" ? false : true,
                             // friction: 10,
                             // tension: 100
                         }),
                         Animated.spring(heightAnimation, {
-                            toValue: pullDownPosition,
+                            toValue: pullDistance * 2 / 3,
                             useNativeDriver: Platform.OS == "web" ? false : true,
                             // friction: 10,
                             // tension: 100
