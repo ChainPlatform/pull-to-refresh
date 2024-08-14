@@ -1,17 +1,18 @@
-import { useRef, forwardRef, useState, useImperativeHandle } from 'react';
-import { Animated, View, ActivityIndicator, PanResponder, Platform } from 'react-native';
+import { useRef, forwardRef, useState, useImperativeHandle, useEffect } from 'react';
+import { Animated, View, ActivityIndicator, UIManager, LayoutAnimation, PanResponder, Platform } from 'react-native';
 
 const ChainScrollView = forwardRef((props, ref) => {
 
+    UIManager.setLayoutAnimationEnabledExperimental && UIManager.setLayoutAnimationEnabledExperimental(true);
+
     const pan = useRef(new Animated.ValueXY()).current;
     const [refreshing, setRefreshing] = useState(false);
-    // const [scrollPosition, setScroll] = useState(0);
-    let scrollPosition = 0;
     let pullDownPosition = 0;
     const pullDistance = typeof props.pullDistance != "undefined" ? props.pullDistance : 75;
     let isReadyToRefresh = false;
     let opacityValue = 0;
     let scaleValue = 0;
+    const scrollPosition = useRef(new Animated.Value(0)).current;
     const heightAnimation = useRef(new Animated.Value(pullDistance)).current;
     const heightStyle = { height: heightAnimation };
     const opacityAnimation = useRef(new Animated.Value(0)).current;
@@ -33,12 +34,6 @@ const ChainScrollView = forwardRef((props, ref) => {
         onPanRelease();
     }
 
-    useImperativeHandle(ref, () => ({
-        onRefreshed: () => {
-            setRefreshed();
-        },
-    }))
-
     const onPanRelease = () => {
         opacityValue = 0;
         scaleValue = 0;
@@ -46,35 +41,7 @@ const ChainScrollView = forwardRef((props, ref) => {
         let dis2 = pullDistance * 2 / 3;
         if (isReadyToRefresh == true) {
             onRefresh();
-            // pullDownPosition = pullDistance * 2 / 3;
-            // Animated.parallel([
-            //     Animated.timing(opacityAnimation, {
-            //         toValue: 0,
-            //         duration: 50,
-            //         useNativeDriver: Platform.OS == "web" ? false : true
-            //     }),
-            //     Animated.timing(scaleAnimation, {
-            //         toValue: 0,
-            //         duration: 50,
-            //         useNativeDriver: Platform.OS == "web" ? false : true
-            //     }),
-            //     Animated.spring(pan, {
-            //         toValue: pullDistance * 2 / 3,
-            //         duration: 50,
-            //         useNativeDriver: Platform.OS == "web" ? false : true,
-            //         // friction: 10,
-            //         // tension: 100
-            //     }),
-            //     Animated.spring(heightAnimation, {
-            //         toValue: pullDistance * 2 / 3,
-            //         duration: 50,
-            //         useNativeDriver: Platform.OS == "web" ? false : true,
-            //         // friction: 10,
-            //         // tension: 100
-            //     })
-            // ]).start();
         } else {
-            // pullDownPosition = 0;
             dis = pullDistance;
             dis2 = 0;
             setRefreshing(false);
@@ -93,32 +60,36 @@ const ChainScrollView = forwardRef((props, ref) => {
             Animated.spring(pan, {
                 toValue: dis2,
                 duration: 50,
-                useNativeDriver: Platform.OS == "web" ? false : true,
-                // friction: 10,
-                // tension: 100
+                useNativeDriver: Platform.OS == "web" ? false : true
             }),
             Animated.spring(heightAnimation, {
                 toValue: dis,
                 duration: 50,
-                useNativeDriver: Platform.OS == "web" ? false : true,
-                // friction: 10,
-                // tension: 100
+                useNativeDriver: Platform.OS == "web" ? false : true
             })
-        ]).start();
+        ]).start(() => {
+            pullDownPosition = 0;
+            LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        });
     }
 
     const panResponderRef = useRef(
         PanResponder.create({
-            // onMoveShouldSetPanResponderCapture: (event, gestureState) => scrollPosition == 0 && gestureState.dy >= 0 && !refreshing,
-            // onPanResponderGrant: (e, gestureState) => {
-            //     pan.setOffset({ x: pan.x._value, y: pan.y._value });
-            //     pan.setValue({ x: 0, y: 0 });
-            // },
-            onMoveShouldSetPanResponder: (event, gestureState) => scrollPosition <= 0 && gestureState.dy >= 0 && !refreshing,
+            onMoveShouldSetPanResponder: (event, gestureState) => gestureState.dy >= 0 && !refreshing && scrollPosition._value == 0,
             onPanResponderMove: (evt, gestureState) => {
-                if (!props.scrollEnabled || scrollPosition > 0) {
+                if (!props.scrollEnabled) {
                     return;
                 }
+
+                if (pullDownPosition >= pullDistance) {
+                    pan.setValue({ x: 0, y: pullDistance });
+                    return;
+                }
+                if (pullDownPosition < 0) {
+                    pan.setValue({ x: 0, y: 0 });
+                    return;
+                }
+
                 pullDownPosition = Math.max(Math.min(pullDistance, gestureState.dy), 0);
                 if (pullDownPosition < pullDistance) {
                     isReadyToRefresh = false;
@@ -144,46 +115,23 @@ const ChainScrollView = forwardRef((props, ref) => {
                         useNativeDriver: false
                     })
                 ]).start();
-                if (pullDownPosition >= pullDistance) {
-                    pan.setValue({ x: 0, y: pullDistance });
-                    return;
-                }
-                if (pullDownPosition <= 0) {
-                    pan.setValue({ x: 0, y: 0 });
-                    return;
-                }
 
-                // console.log("onPanResponderMove refreshing ", refreshing);
-                // console.log("onPanResponderMove basePullDistance ", basePullDistance);
-                // console.log("onPanResponderMove pullDownPosition ", pullDownPosition);
-                // console.log("onPanResponderMove scrollPosition ", scrollPosition);
-                // console.log("onPanResponderMove isReadyToRefresh ", isReadyToRefresh);
-
-                return Animated.event([null, {
-                    dx: 0, dy: pan.y
-                }
+                return Animated.event([null, { dx: 0, dy: pan.y }
                 ], { useNativeDriver: false })(evt, gestureState)
             },
-            onPanResponderRelease: () => {
-                // if (pullDownPosition >= pullDistance &&
-                //     isReadyToRefresh === false &&
-                //     typeof props.refreshing != "undefined" &&
-                //     props.refreshing == false) {
-                //     isReadyToRefresh = true;
-                // }
-                onPanRelease();
-            },
-            onPanResponderTerminate: () => {
-                onPanRelease();
-            }
+            onPanResponderRelease: onPanRelease,
+            onPanResponderTerminate: onPanRelease
         })
-        //, [scrollPosition, refreshing]
     );
 
+    useImperativeHandle(ref, () => ({
+        onRefreshed: () => {
+            setRefreshed();
+        }
+    }))
+
     const scrollHandler = (event) => {
-        scrollPosition = event.nativeEvent.contentOffset.y;
-        // setScroll(event.nativeEvent.contentOffset.y);
-        // console.log("scrollHandler scrollPosition ", scrollPosition);
+        scrollPosition.setValue(event.nativeEvent.contentOffset.y);
         if (typeof props.onScroll != "undefined") {
             props.onScroll(event.nativeEvent);
         }
@@ -232,9 +180,15 @@ const ChainScrollView = forwardRef((props, ref) => {
                 typeof props.keyExtractor != "undefined" &&
                     typeof props.renderItem === "function" &&
                     typeof props.data === "function" ?
-                    <Animated.FlatList {...props} ref={ref} onScroll={scrollHandler} />
+                    <Animated.FlatList {...props} ref={ref}
+                        scrollEventThrottle={16}
+                        onScroll={(event) => scrollHandler(event)}
+                    />
                     :
-                    <Animated.ScrollView {...props} ref={ref} onScroll={scrollHandler} >
+                    <Animated.ScrollView {...props} ref={ref}
+                        scrollEventThrottle={16}
+                        onScroll={(event) => scrollHandler(event)}
+                    >
                         {props.children}
                     </Animated.ScrollView>
             }

@@ -1,6 +1,6 @@
 {
   "name": "@chainplatform/pull-to-refresh",
-  "version": "0.2.6",
+  "version": "0.2.7",
   "description": "React Native Pull To Refresh for React Native and React Native Web, support ScrollView and FlatList. Bring Pull To Refresh to Website.",
   "main": "index.js",
   "devDependencies": {
