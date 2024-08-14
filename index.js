@@ -5,6 +5,7 @@ const ChainScrollView = forwardRef((props, ref) => {
 
     const pan = useRef(new Animated.ValueXY()).current;
     const [refreshing, setRefreshing] = useState(false);
+    // const [scrollPosition, setScroll] = useState(0);
     let scrollPosition = 0;
     let pullDownPosition = 0;
     const pullDistance = typeof props.pullDistance != "undefined" ? props.pullDistance : 75;
@@ -72,14 +73,14 @@ const ChainScrollView = forwardRef((props, ref) => {
 
     const panResponderRef = useRef(
         PanResponder.create({
-            onMoveShouldSetPanResponder: (event, gestureState) => scrollPosition == 0 && gestureState.dy >= 0 && !refreshing,
-            onMoveShouldSetPanResponderCapture: (event, gestureState) => scrollPosition == 0 && gestureState.dy >= 0 && !refreshing,
-            onPanResponderGrant: (e, gestureState) => {
-                pan.setOffset({ x: pan.x._value, y: pan.y._value });
-                pan.setValue({ x: 0, y: 0 });
-            },
+            // onMoveShouldSetPanResponderCapture: (event, gestureState) => scrollPosition == 0 && gestureState.dy >= 0 && !refreshing,
+            // onPanResponderGrant: (e, gestureState) => {
+            //     pan.setOffset({ x: pan.x._value, y: pan.y._value });
+            //     pan.setValue({ x: 0, y: 0 });
+            // },
+            onMoveShouldSetPanResponder: (event, gestureState) => scrollPosition <= 0 && gestureState.dy >= 0 && !refreshing,
             onPanResponderMove: (evt, gestureState) => {
-                if (!props.scrollEnabled) {
+                if (!props.scrollEnabled || scrollPosition > 0) {
                     return;
                 }
                 pullDownPosition = Math.max(Math.min(pullDistance, gestureState.dy), 0);
@@ -109,6 +110,13 @@ const ChainScrollView = forwardRef((props, ref) => {
                     pan.setValue({ x: 0, y: 0 });
                     return;
                 }
+
+                console.log("onPanResponderMove refreshing ", refreshing);
+                console.log("onPanResponderMove basePullDistance ", basePullDistance);
+                console.log("onPanResponderMove pullDownPosition ", pullDownPosition);
+                console.log("onPanResponderMove scrollPosition ", scrollPosition);
+                console.log("onPanResponderMove isReadyToRefresh ", isReadyToRefresh);
+
                 return Animated.event([null, {
                     dx: 0, dy: pan.y
                 }
@@ -157,11 +165,16 @@ const ChainScrollView = forwardRef((props, ref) => {
             onPanResponderTerminate: () => {
                 onPanRelease();
             }
-        }),
+        })
+        //, [scrollPosition, refreshing]
     );
 
     const scrollHandler = (event) => {
         scrollPosition = event.nativeEvent.contentOffset.y;
+        // setScroll(event.nativeEvent.contentOffset.y);
+
+        console.log("scrollHandler scrollPosition ", scrollPosition);
+
         if (typeof props.onScroll != "undefined") {
             props.onScroll(event.nativeEvent);
         }
