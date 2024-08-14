@@ -20,8 +20,8 @@ const ChainScrollView = forwardRef((props, ref) => {
 
     const onRefresh = () => {
         if (typeof props.onRefresh != "undefined" && typeof props.onRefresh === "function") {
-            props.onRefresh();
             setRefreshing(true);
+            props.onRefresh();
         } else {
             setRefreshed();
         }
@@ -106,7 +106,9 @@ const ChainScrollView = forwardRef((props, ref) => {
                 ], { useNativeDriver: false })(evt, gestureState)
             },
             onPanResponderRelease: () => {
-                if (pullDownPosition >= pullDistance && isReadyToRefresh === false) {
+                if (pullDownPosition >= pullDistance &&
+                    isReadyToRefresh === false &&
+                    typeof props.refreshing != "undefined" && props.refreshing == false) {
                     isReadyToRefresh = true;
                 }
                 opacityValue = 0;

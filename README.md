@@ -46,6 +46,10 @@ import ChainScrollView from '@chainplatform/pull-to-refresh';
 
 class App extends React.Component {
 
+onRefresh() {
+  this.setState({refreshing: true});
+}
+
   render() {
     return (
       <View style={{flex:1}}>
@@ -61,6 +65,8 @@ class App extends React.Component {
                     horizontal={false}
                     alwaysBounceHorizontal={false}
                     alwaysBounceVertical={false}
+                    refreshing={this.state.refreshing}
+                    onRefresh={() => this.onRefresh()}
                 >
 
                 </ChainScrollView>
