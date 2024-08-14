@@ -29,6 +29,7 @@ const ChainScrollView = forwardRef((props, ref) => {
     }
 
     const setRefreshed = () => {
+        isReadyToRefresh = false;
         onPanRelease();
     }
 
@@ -39,10 +40,45 @@ const ChainScrollView = forwardRef((props, ref) => {
     }))
 
     const onPanRelease = () => {
-        pullDownPosition = 0;
         opacityValue = 0;
         scaleValue = 0;
-        isReadyToRefresh = false;
+        let dis = pullDistance * 2 / 3;
+        let dis2 = pullDistance * 2 / 3;
+        if (isReadyToRefresh == true) {
+            onRefresh();
+            // pullDownPosition = pullDistance * 2 / 3;
+            // Animated.parallel([
+            //     Animated.timing(opacityAnimation, {
+            //         toValue: 0,
+            //         duration: 50,
+            //         useNativeDriver: Platform.OS == "web" ? false : true
+            //     }),
+            //     Animated.timing(scaleAnimation, {
+            //         toValue: 0,
+            //         duration: 50,
+            //         useNativeDriver: Platform.OS == "web" ? false : true
+            //     }),
+            //     Animated.spring(pan, {
+            //         toValue: pullDistance * 2 / 3,
+            //         duration: 50,
+            //         useNativeDriver: Platform.OS == "web" ? false : true,
+            //         // friction: 10,
+            //         // tension: 100
+            //     }),
+            //     Animated.spring(heightAnimation, {
+            //         toValue: pullDistance * 2 / 3,
+            //         duration: 50,
+            //         useNativeDriver: Platform.OS == "web" ? false : true,
+            //         // friction: 10,
+            //         // tension: 100
+            //     })
+            // ]).start();
+        } else {
+            // pullDownPosition = 0;
+            dis = pullDistance;
+            dis2 = 0;
+            setRefreshing(false);
+        }
         Animated.parallel([
             Animated.timing(opacityAnimation, {
                 toValue: opacityValue,
@@ -55,20 +91,20 @@ const ChainScrollView = forwardRef((props, ref) => {
                 useNativeDriver: Platform.OS == "web" ? false : true
             }),
             Animated.spring(pan, {
-                toValue: pullDownPosition,
+                toValue: dis2,
+                duration: 50,
                 useNativeDriver: Platform.OS == "web" ? false : true,
                 // friction: 10,
                 // tension: 100
             }),
             Animated.spring(heightAnimation, {
-                toValue: pullDistance,
+                toValue: dis,
                 duration: 50,
                 useNativeDriver: Platform.OS == "web" ? false : true,
                 // friction: 10,
                 // tension: 100
             })
         ]).start();
-        setRefreshing(false);
     }
 
     const panResponderRef = useRef(
@@ -135,38 +171,7 @@ const ChainScrollView = forwardRef((props, ref) => {
                 //     props.refreshing == false) {
                 //     isReadyToRefresh = true;
                 // }
-                if (isReadyToRefresh == true) {
-                    opacityValue = 0;
-                    scaleValue = 0;
-                    onRefresh();
-                    // pullDownPosition = pullDistance * 2 / 3;
-                    Animated.parallel([
-                        Animated.timing(opacityAnimation, {
-                            toValue: 0,
-                            duration: 1,
-                            useNativeDriver: Platform.OS == "web" ? false : true
-                        }),
-                        Animated.timing(scaleAnimation, {
-                            toValue: 0,
-                            duration: 1,
-                            useNativeDriver: Platform.OS == "web" ? false : true
-                        }),
-                        Animated.spring(pan, {
-                            toValue: pullDistance * 2 / 3,
-                            useNativeDriver: Platform.OS == "web" ? false : true,
-                            // friction: 10,
-                            // tension: 100
-                        }),
-                        Animated.spring(heightAnimation, {
-                            toValue: pullDistance * 2 / 3,
-                            useNativeDriver: Platform.OS == "web" ? false : true,
-                            // friction: 10,
-                            // tension: 100
-                        })
-                    ]).start();
-                } else {
-                    onPanRelease();
-                }
+                onPanRelease();
             },
             onPanResponderTerminate: () => {
                 onPanRelease();
