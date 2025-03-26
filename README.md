@@ -65,6 +65,15 @@ onRefresh() {
                     horizontal={false}
                     alwaysBounceHorizontal={false}
                     alwaysBounceVertical={false}
+                    refreshing_letters={"Loading"}
+                    default_letters={"Pull to refresh"}
+                    textStyle={
+                        {
+                            fontSize: 14,
+                            fontWeight: 500,
+                            color: !this.state.refreshing ? "#DDDDDD" : "green"
+                        }
+                    }
                     refreshing={this.state.refreshing}
                     onRefresh={() => this.onRefresh()}
                 >
