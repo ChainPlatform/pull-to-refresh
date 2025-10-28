@@ -1,148 +1,109 @@
-import React, { Component, createRef } from "react";
+import React, { Component, createRef } from 'react';
 import {
     Animated,
     View,
     UIManager,
-    PanResponder,
-    Platform,
     Easing,
-} from "react-native";
-import DancingText from "./DancingText";
-import ScrollView from "./scroll";
+    ActivityIndicator,
+    PanResponder,
+    Platform
+} from 'react-native';
+import DancingText from './DancingText';
 
 class ChainScrollView extends Component {
     constructor(props) {
         super(props);
 
-        if (
-            UIManager.setLayoutAnimationEnabledExperimental &&
-            Platform.OS !== "web"
-        ) {
+        UIManager.setLayoutAnimationEnabledExperimental &&
+            Platform.OS !== "web" &&
             UIManager.setLayoutAnimationEnabledExperimental(true);
-        }
-
-        // Animated values
-        this.pan = new Animated.ValueXY();
-        this.scrollPosition = new Animated.Value(0);
-        this.heightAnimation = new Animated.Value(this.props.pullDistance || 75);
-        this.opacityAnimation = new Animated.Value(0);
-        this.useNativeDriver = Platform.OS !== "web";
 
         this.state = { refreshing: false };
 
-        this.pullDownPosition = 0;
-        this.pullDistance = this.props.pullDistance || 75;
+        this.refreshing = false;
+        this.pullDistance = this.props.pullDistance || 80;
+        this.panY = new Animated.Value(0);
+        this.opacityAnimation = new Animated.Value(0);
+        this.useNativeDriver = Platform.OS !== "web";
         this.isReadyToRefresh = false;
+        this.scrollPosition = new Animated.Value(0);
         this.scrollRef = createRef();
 
-        // Gesture handler
         this.panResponder = PanResponder.create({
             onMoveShouldSetPanResponder: (evt, gestureState) =>
-                gestureState.dy >= 0 &&
+                gestureState.dy > 0 &&
                 !this.state.refreshing &&
                 this.scrollPosition._value === 0,
-            onPanResponderMove: (evt, gestureState) =>
-                this.handlePanMove(evt, gestureState),
+            onPanResponderMove: (evt, gestureState) => this.handlePanMove(gestureState.dy),
             onPanResponderRelease: () => this.onPanRelease(),
             onPanResponderTerminate: () => this.onPanRelease(),
         });
     }
 
-    /** Trigger refresh */
-    onRefresh = () => {
+    handlePanMove = (dy) => {
         if (this.state.refreshing) return;
-        if (typeof this.props.onRefresh === "function") {
-            this.setState({ refreshing: true }, () => {
-                this.props.onRefresh();
-            });
-        } else {
-            this.setRefreshed();
-        }
+
+        const pullDown = Math.max(0, Math.min(dy, this.pullDistance * 1.5));
+        this.panY.setValue(pullDown);
+
+        const progress = Math.min(1, pullDown / this.pullDistance);
+        this.opacityAnimation.setValue(progress);
+
+        this.refreshing = pullDown >= this.pullDistance;
+        this.isReadyToRefresh = pullDown >= this.pullDistance;
     };
 
-    /** Public helper (external call safe) */
-    onRefreshed = () => this.setRefreshed();
-
-    /** Reset refresh state */
-    setRefreshed = () => {
-        this.isReadyToRefresh = false;
-        this.setState({ refreshing: false });
-        this.resetPull();
-    };
-
-    /** Reset pull state smoothly */
-    resetPull = () => {
-        Animated.parallel([
-            Animated.timing(this.opacityAnimation, {
-                toValue: 0,
-                duration: 180,
-                easing: Easing.out(Easing.quad),
-                useNativeDriver: this.useNativeDriver,
-            }),
-            Animated.spring(this.pan.y, {
-                toValue: 0,
-                tension: 38,
-                friction: 11,
-                useNativeDriver: this.useNativeDriver,
-            }),
-            Animated.spring(this.heightAnimation, {
-                toValue: this.pullDistance,
-                tension: 40,
-                friction: 10,
-                useNativeDriver: this.useNativeDriver,
-            })
-        ]).start();
-    };
-
-    /** Handle release after pull */
     onPanRelease = () => {
         if (this.isReadyToRefresh) {
+            Animated.spring(this.panY, {
+                toValue: this.pullDistance * 0.75,
+                useNativeDriver: this.useNativeDriver,
+            }).start(() => { });
             this.onRefresh();
-            Animated.sequence([
-                Animated.spring(this.pan.y, {
-                    toValue: this.pullDistance * 0.48,
-                    tension: 55,
-                    friction: 9,
-                    useNativeDriver: this.useNativeDriver,
-                }),
-                Animated.spring(this.pan.y, {
-                    toValue: this.pullDistance * 0.45,
-                    tension: 65,
-                    friction: 10,
-                    useNativeDriver: this.useNativeDriver,
-                })
-            ]).start();
-            // Animated.spring(this.pan.y, {
-            //     toValue: this.pullDistance * 0.5,
-            //     friction: 6,
-            //     tension: 90,
-            //     useNativeDriver: this.useNativeDriver,
-            // }).start(() => this.onRefresh());
         } else {
-            this.resetPull();
+            this.refreshing = false;
+            Animated.timing(this.panY, {
+                toValue: 0,
+                duration: 200,
+                easing: Easing.out(Easing.quad),
+                useNativeDriver: this.useNativeDriver,
+            }).start();
         }
     };
 
-    /** Handle dragging movement */
-    handlePanMove = (evt, gestureState) => {
-        if (!this.props.scrollEnabled) return;
-
-        this.pullDownPosition = Math.max(
-            Math.min(this.pullDistance * 1.2, gestureState.dy),
-            0
-        );
-
-        this.isReadyToRefresh = this.pullDownPosition >= this.pullDistance;
-
-        const basePull = this.pullDownPosition / this.pullDistance;
-        const easedY = this.pullDistance * (1 - Math.pow(1 - basePull, 3));
-
-        // opacity
-        this.opacityAnimation.setValue(basePull);
-        this.pan.setValue({ x: 0, y: easedY });
+    onRefresh = async () => {
+        if (this.state.refreshing) return;
+        this.setState({ refreshing: true }, async () => {
+            try {
+                if (typeof this.props.onRefresh === "function") {
+                    await this.props.onRefresh();
+                }
+            } catch (e) {
+                console.warn("Refresh error:", e);
+            } finally {
+                this.finishRefreshing();
+            }
+        });
     };
 
-    /** Scroll tracking */
+    finishRefreshing = () => {
+        Animated.sequence([
+            Animated.delay(250),
+            Animated.parallel([
+                Animated.timing(this.panY, {
+                    toValue: 0,
+                    duration: 200,
+                    easing: Easing.out(Easing.quad),
+                    useNativeDriver: this.useNativeDriver,
+                })
+            ])
+        ]).start(() => {
+            this.setState({ refreshing: false });
+            this.isReadyToRefresh = false;
+            this.refreshing = false;
+        });
+    };
+
     scrollHandler = (event) => {
         this.scrollPosition.setValue(event.nativeEvent.contentOffset.y);
         if (typeof this.props.onScroll === "function") {
@@ -150,47 +111,62 @@ class ChainScrollView extends Component {
         }
     };
 
+    onRefreshed() {
+
+    }
+
     render() {
-        const translateYCenter = Animated.add(
-            Animated.divide(this.pan.y, 2),
-            Animated.multiply(
-                Animated.subtract(this.heightAnimation, this.pullDistance),
-                0.25
-            )
-        );
+        const translateY = this.panY.interpolate({
+            inputRange: [0, this.pullDistance],
+            outputRange: [0, this.pullDistance],
+            extrapolate: 'clamp',
+        });
+
+        const opacity = this.opacityAnimation.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0, 1],
+        });
 
         return (
-            <View
-                pointerEvents={this.state.refreshing ? "none" : "auto"}
-                style={{ flex: 1 }}
-            >
-                {/* Pull indicator */}
+            <View style={{ flex: 1, overflow: 'hidden' }}>
                 <Animated.View
                     style={{
-                        position: "absolute",
+                        position: 'absolute',
                         top: 0,
                         left: 0,
-                        width: "100%",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        transform: [{ translateY: translateYCenter }],
-                        zIndex: 10,
+                        right: 0,
+                        height: this.pullDistance,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        transform: [{
+                            translateY: translateY.interpolate({
+                                inputRange: [0, this.pullDistance],
+                                outputRange: [-this.pullDistance / 2, 0],
+                                extrapolate: 'clamp'
+                            })
+                        }],
                     }}
                 >
-                    {this.state.refreshing ? (<DancingText
-                        letters={this.props.refreshing_letters || "Loading"}
-                        textStyle={this.props.textStyle}
-                    />) : (<Animated.View style={{ opacity: this.opacityAnimation }}>
-                        <DancingText
-                            letters={this.props.default_letters || "Pull to refresh"}
-                            textStyle={this.props.textStyle}
+                    {this.refreshing ? (
+                        <ActivityIndicator
+                            size="small"
+                            color={this.props?.textStyle?.color || "#00C853"}
                         />
-                    </Animated.View>)}
+                    ) : (
+                        <Animated.View style={{ opacity }}>
+                            <DancingText
+                                letters={this.props.default_letters || "Pull to refresh"}
+                                textStyle={[
+                                    this.props.textStyle,
+                                    { textAlign: 'center' },
+                                ]}
+                            />
+                        </Animated.View>
+                    )}
                 </Animated.View>
 
-                {/* Scroll content */}
                 <Animated.View
-                    style={{ flex: 1, transform: [{ translateY: this.pan.y }] }}
+                    style={{ flex: 1, transform: [{ translateY }] }}
                     {...this.panResponder.panHandlers}
                 >
                     {this.props.keyExtractor && typeof this.props.renderItem === "function" ? (
@@ -219,5 +195,3 @@ class ChainScrollView extends Component {
 export default React.forwardRef((props, ref) => (
     <ChainScrollView {...props} ref={(instance) => ref && (ref.current = instance)} />
 ));
-
-export { ScrollView };

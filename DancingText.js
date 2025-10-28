@@ -1,4 +1,4 @@
-import React, { PureComponent } from 'react';
+import { PureComponent } from 'react';
 import { Animated, View, Platform } from 'react-native';
 
 class DancingText extends PureComponent {
