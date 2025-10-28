@@ -84,3 +84,27 @@ onRefresh() {
   }
 }
 ```
+
+---
+
+## 🪪 License
+MIT © 2025 [Chain Platform](https://chainplatform.net)
+
+---
+
+## 💖 Support & Donate
+
+If you find this package helpful, consider supporting the development:
+
+| Cryptocurrency | Address |
+|----------------|----------|
+| **Bitcoin (BTC)** | `17grbSNSEcEybS1nHh4TGYVodBwT16cWtc` |
+![alt text](image-1.png)
+| **Ethereum (ETH)** | `0xa2fd119a619908d53928e5848b49bf1cc15689d4` |
+![alt text](image-2.png)
+| **Tron (TRX)** | `TYL8p2PLCLDfq3CgGBp58WdUvvg9zsJ8pd` |
+![alt text](image.png)
+| **DOGE (DOGE)** | `DDfKN2ys4frNaUkvPKcAdfL6SiVss5Bm19` |
+| **USDT (SOLANA)** | `cPUZsb7T9tMfiZFqXbWbRvrUktxgZQXQ2Ni1HiVXgFm` |
+
+Your contribution helps maintain open-source development under the Chain Platform ecosystem 🚀
