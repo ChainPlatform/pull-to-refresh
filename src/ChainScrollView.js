@@ -57,6 +57,9 @@ class ChainScrollView extends Component {
         if (this.isReadyToRefresh) {
             this.isReadyToRefresh = false;
             this.refreshing = true;
+
+            try { global.__CHAIN_PULL_REFRESHING = true; } catch (e) { /* ignore */ }
+
             this.refreshScale.setValue(1);
 
             Animated.spring(this.panY, {
@@ -132,6 +135,9 @@ class ChainScrollView extends Component {
         ]).start(() => {
             this.refreshing = false;
             this.isReadyToRefresh = false;
+
+            try { global.__CHAIN_PULL_REFRESHING = false; } catch (e) { /* ignore */ }
+
             Animated.timing(this.refreshViewOpacity, {
                 toValue: 0,
                 duration: 0,
