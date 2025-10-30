@@ -8,7 +8,7 @@ import {
     PanResponder,
     Platform
 } from 'react-native';
-import DancingText from './DancingText';
+import DancingText from '@chainplatform/animated';
 
 class ChainScrollView extends Component {
     constructor(props) {
