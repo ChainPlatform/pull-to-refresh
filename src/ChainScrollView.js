@@ -7,12 +7,18 @@ import {
     ActivityIndicator,
     PanResponder,
     Platform,
+    Modal
 } from 'react-native';
 import DancingText from '@chainplatform/animated';
 
 class ChainScrollView extends Component {
     constructor(props) {
         super(props);
+
+        this.state = {
+            refreshing: false,
+            refreshingOverlay: false,
+        };
 
         UIManager.setLayoutAnimationEnabledExperimental &&
             Platform.OS !== 'web' &&
@@ -31,10 +37,14 @@ class ChainScrollView extends Component {
         this.isReadyToRefresh = false;
 
         this.panResponder = PanResponder.create({
-            onMoveShouldSetPanResponder: (evt, gestureState) =>
-                gestureState.dy > 0 &&
-                !this.refreshing &&
-                this.scrollPosition._value === 0,
+            onMoveShouldSetPanResponder: (evt, gestureState) => {
+                if (this.refreshing) return false;
+                // if (this.state.refreshing) return false;
+                return (
+                    gestureState.dy > 0 &&
+                    this.scrollPosition._value === 0
+                );
+            },
             onPanResponderMove: (evt, gestureState) =>
                 this.handlePanMove(gestureState.dy),
             onPanResponderRelease: () => this.onPanRelease(),
@@ -44,6 +54,7 @@ class ChainScrollView extends Component {
 
     handlePanMove = (dy) => {
         if (this.refreshing) return;
+        // if (this.state.refreshing) return;
         const pullDown = Math.max(0, Math.min(dy, this.pullDistance * 1.5));
         this.panY.setValue(pullDown);
         const progress = Math.min(1, pullDown / this.pullDistance);
@@ -57,8 +68,10 @@ class ChainScrollView extends Component {
         if (this.isReadyToRefresh) {
             this.isReadyToRefresh = false;
             this.refreshing = true;
+            this.setState({ refreshingOverlay: true });
+            // this.setState({ refreshing: true });
 
-            try { global.__CHAIN_PULL_REFRESHING = true; } catch (e) { /* ignore */ }
+            try { global.__CHAIN_PULL_REFRESHING = true; } catch (e) { }
 
             this.refreshScale.setValue(1);
 
@@ -86,6 +99,8 @@ class ChainScrollView extends Component {
                 }),
             ]).start(() => {
                 this.refreshing = false;
+                this.setState({ refreshingOverlay: false });
+                // this.setState({ refreshing: false });
             });
         }
     };
@@ -134,9 +149,11 @@ class ChainScrollView extends Component {
             ]),
         ]).start(() => {
             this.refreshing = false;
+            this.setState({ refreshingOverlay: false });
+            // this.setState({ refreshing: false });
             this.isReadyToRefresh = false;
 
-            try { global.__CHAIN_PULL_REFRESHING = false; } catch (e) { /* ignore */ }
+            try { global.__CHAIN_PULL_REFRESHING = false; } catch (e) { }
 
             Animated.timing(this.refreshViewOpacity, {
                 toValue: 0,
@@ -197,10 +214,7 @@ class ChainScrollView extends Component {
                         <Animated.View style={{ opacity }}>
                             <DancingText
                                 animated
-                                letters={
-                                    this.props.default_letters ||
-                                    'Pull to refresh'
-                                }
+                                letters={this.props.default_letters || 'Pull to refresh'}
                                 textStyle={[
                                     this.props.textStyle,
                                     { textAlign: 'center' },
@@ -217,13 +231,12 @@ class ChainScrollView extends Component {
                     >
                         <ActivityIndicator
                             size="small"
-                            color={
-                                this.props?.textStyle?.color || '#00C853'
-                            }
+                            color={this.props?.textStyle?.color || '#00C853'}
                         />
                     </Animated.View>
                 </Animated.View>
                 <Animated.View
+                    // pointerEvents={this.state.refreshing ? 'none' : 'auto'}
                     style={{ flex: 1, transform: [{ translateY }] }}
                     {...this.panResponder.panHandlers}
                 >
@@ -246,6 +259,15 @@ class ChainScrollView extends Component {
                         </Animated.ScrollView>
                     )}
                 </Animated.View>
+                <Modal transparent visible={this.state.refreshingOverlay}>
+                    <View
+                        pointerEvents="auto"
+                        style={{
+                            flex: 1,
+                            backgroundColor: 'transparent',
+                        }}
+                    />
+                </Modal>
             </View>
         );
     }
